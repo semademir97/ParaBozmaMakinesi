@@ -1,0 +1,60 @@
+PARA BOZMA MAKİNESİ TASARIMI
+1.Sema Demir 2.Emre Sualp
+Bilgisayar Mühendisliği Bölümü
+Kocaeli Üniversitesi
+1.sema.demir.1997@gmail.com 2.esualp95@gmail.com
+ 
+Özet
+Projede Tiva C/Stellaris launchpad / STM kartlarından birini kullanarak bir para bozma makinesi tasarlamamız istenmiştir. Bu projede seçtiğimiz kartı elektronik bağlantılarını yaparak sanal makinede kodlamamız, bu sayede bu elektronik devreler kullanarak bir nevi microcontroller kodlamayı öğrenmemiz 
+amaçlanmıştır.
+ 
+Gerekli elektronik devre elemanlarını kullanarak bir devre oluşturmamız ve seçtiğimiz geliştirme kartı ile devreyi tamamlayarak bir para bozma makinesi tasarlamamız istenmiştir. Butonlarla istenilen parayı girmemiz ve girilen parayı bozmamız amaçlanmıştır. 
+Bu proje sayesinde Sistem Programlama dersinde kullandığımız Tiva ile Elektronik dersinde gördümüz bilgileri programlama bilgimiz ile harmanlamış ve ortaya bu projeyi çıkartmış olduk.
+1.Giriş
+Breadboard’un üzerine kablolar, butonlar, LCD kullanarak bir düzenek oluşturup onu da kartımıza bağladık. Sanal makine üzerine kurduğumuz Debian makine üzerinde Eclipse çalıştırarak kodlama için gerekli ortamı oluşturduk. Tiva’yı bağladığımızda makinemiz Tiva’yi görmediği için Extension pack yükledik. Extension Pack’i yükleyince bilgisayarımız Tiva’yı görmeye başladı. Bu sayede elektronik bağlantılarını yaptığımız Tiva’yı kodlamaya başlamış olduk. 
+LCD ile alakalı problem olduğunu fark ettik. LCD’nin altında bulunan led yanmıyordu, LCD’yi açamıyorduk. Çözümü LCD’nin lehimlenmesi gerekiği olarak bulduk ve çok ince bir işçilikle LCD’yi lehimledik.
+100 TL’den az girilen parayı bozma üzerine bir algoritma yazdık. Butonlara basarak istediğimiz miktarı girdik. Bunun için 5 tane buton kullandık. Örneğin 12.34 için 1 kez ilk butona 2 kez 2. butona 1 kez 3. butona 3 kez 4. butona 4 kez de 5. butona basarak LCD ekran üzerine parayı yazdırdık.Tam parayı 20’lik, 10’luk, 5’lik, 1’lik olarak(lira); 50’lik, 25’lik, 10’luk,5’lik, 1’lik olarak da (kuruş) bozuk kısmı bozduk.
+Paranın kendisini butonlarla, bozulan kısmı ve adedini de LCD’ye yazdırdık.Bu şekilde proje isterlerini yerine getirdik.
+2.Temel Bilgiler
+Kullandığımız elektronik malzemeler: 
+-Tiva C geliştirme kartı
+-2 adet breadboard
+-LCD Display
+-7 adet Buton
+-7 adet led
+-Direnç
+-Jumper
+-Potansiyometre
+-Lehim(LCD’yi breadboard’a lehimlemek için)
+Diğer:
+-Virtual Machine
+-Debian dağıtımı
+-Multisim
+Yukarıda yazdığımız malzemeleri ve programları kullanarak istenen düzeneği oluşturduk ve projeyi tamamladık. 
+
+3.Diğer Bölümler
+Yaptığımız proje elektronik bir proje olduğu için o karta ve elektronik parçalara uygun kodlar yazmamız gerekiyordu. O kodları da yazabilmemiz için uygun kütüphanelere ihtiyacımız vardı. Butona bastığımızı algılaması, ona uygun ledleri yakması, butona bastığımız kadar para miktarını LCD’ye bastırması, bozduğumuz parayı LCD’ye yazdırması gibi işlemler için farklı özel kütüphanelere ihtiyacımız vardı. Kütüphaneler haricinde lcd.h, lcd.c, button.h, button.c, led.h, led.c gibi sınıflar oluşturduk.
+Lcd.h sınıfı Lcd.c sınıfındaki fonksiyonların yer aldığı sınıf,
+Lcd.c sınıfı Lcd fonksiyonlarının dolduruldugu sınıf,
+Button.h sınıfı Button.c sınıfındaki fonksiyonların yer aldığı sınıf,
+Button.c sınıfı Butonların tiva üzerindeki pinlerinin tanımlı olduğu fonksiyonları içeren sınıf,
+Led.h sınıfı led.c sınıfının fonksiyonlarının yer aldığı sınıf,
+Led.c sınıfı Ledlerin tiva üzerindeki pinlerinin tanımlı olduğu fonksiyonları içeren sınıf olarak tanımladık.
+
+4.Sonuçlar
+Proje tanıtım dosyasında verilen isterleri tam olarak yerine getirmek için defalarca kez dosyayı okuduk, notlar aldık. Aldığımız notlar doğrultusunda bize farklı gelen bu projeyi yapabilmek için internet üzerinde derin araştırmalar yaptık. Herhangi bir devre elemanını yakmamak için her bir denemeyi dikkatli şekilde yapmak, bize yabancı bir konu olduğu için her bir adımı araştırarak atmak zamanımızı fazlasıyla aldı. Şu vakte kadar en çok araştırma yaptığımız proje oldu. Kartı araştırdık, LCD bağlantılarını araştırdık, elektronik araştırdık, devreyi çizebilmek için multisimi araştırdık… Projenin her bir aşamasını yerli ve yabancı kaynakları okuyarak, araştırarak geçirdik. Proje çok kolay duruyor olmasına rağmen çok emek isteyen bir proje oldu ve deyim yerindeyse tüm enerjimizi bu proje için harcadık. 
+Tüm araştırmaları yaptıktan sonra elde ettiğimiz sonuç bizi fazlasıyla tatmin etti. Butonlarla istediğimiz parayı girip paranın bozulmuş halini ekranda gördüğümüzde emeklerimize değdiğini anladık ve fazlasıyla yorgun bir mutluluk yaşadık.
+Projede istenilen isterleri tamamen yaptık ve bonusları da ekledik. Bu sebeple projeden yüksek bir puan bekliyoruz.
+
+5.Kaynakça
+[1] http://www.mcu-turkey.com/texas-inst-tiva-c-serisi-nasil-baslangic-yapilir/
+ 
+[2] http://www.mcu-turkey.com/tiva-c-serisi-tm4c123g-launchpad/
+[3] http://www.mcu-turkey.com/ti-tiva-eeprom-e2prom-yapisi-okuma-ve-yazma-islemi/
+[4] http://www.mcu-turkey.com/tiva-c-series-launchpad-ile-uygulama-gelistirme-4-gpio-kullanimi-input/
+[5] http://www.mcu-turkey.com/category/samples/mcucpu/tiva_c/  
+[6] http://embedded.kocaeli.edu.tr/sistemprogramlama_17_18/
+[7] http://www.ni.com/multisim/
+[8] https://www.youtube.com/watch?v=DRkCmHD6RuI
+[9] https://www.youtube.com/watch?v=vyy_5t2QMCQ
+[10] https://www.youtube.com/watch?v=8HOkQWZJZ-I
