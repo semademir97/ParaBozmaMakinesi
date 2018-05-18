@@ -1,0 +1,1045 @@
+/** STARTUP_GCC.C **/ 
+//*****************************************************************************
+//
+// startup_gcc.c - Startup code for use with GNU tools.
+//
+// Copyright (c) 2012 Texas Instruments Incorporated.  All rights reserved.
+// Software License Agreement
+// 
+// Texas Instruments (TI) is supplying this software for use solely and
+// exclusively on TI's microcontroller products. The software is owned by
+// TI and/or its suppliers, and is protected under applicable copyright
+// laws. You may not combine this software with "viral" open-source
+// software in order to form a larger program.
+// 
+// THIS SOFTWARE IS PROVIDED "AS IS" AND WITH ALL FAULTS.
+// NO WARRANTIES, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT
+// NOT LIMITED TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. TI SHALL NOT, UNDER ANY
+// CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL, OR CONSEQUENTIAL
+// DAMAGES, FOR ANY REASON WHATSOEVER.
+// 
+// This is part of revision 9453 of the EK-LM4F120XL Firmware Package.
+//
+//*****************************************************************************
+
+#include "inc/hw_nvic.h"
+#include "inc/hw_types.h"
+
+//*****************************************************************************
+//
+// Forward declaration of the default fault handlers.
+//
+//*****************************************************************************
+void ResetISR(void);
+static void NmiSR(void);
+static void FaultISR(void);
+static void IntDefaultHandler(void);
+
+//*****************************************************************************
+//
+// The entry point for the application.
+//
+//*****************************************************************************
+extern int main(void);
+
+//*****************************************************************************
+//
+// Reserve space for the system stack.
+//
+//*****************************************************************************
+static unsigned long pulStack[128];
+
+//*****************************************************************************
+//
+// The vector table.  Note that the proper constructs must be placed on this to
+// ensure that it ends up at physical address 0x0000.0000.
+//
+//*****************************************************************************
+__attribute__ ((section(".isr_vector")))
+void (* const g_pfnVectors[])(void) =
+{
+    (void (*)(void))((unsigned long)pulStack + sizeof(pulStack)),
+                                            // The initial stack pointer
+    ResetISR,                               // The reset handler
+    NmiSR,                                  // The NMI handler
+    FaultISR,                               // The hard fault handler
+    IntDefaultHandler,                      // The MPU fault handler
+    IntDefaultHandler,                      // The bus fault handler
+    IntDefaultHandler,                      // The usage fault handler
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    IntDefaultHandler,                      // SVCall handler
+    IntDefaultHandler,                      // Debug monitor handler
+    0,                                      // Reserved
+    IntDefaultHandler,                      // The PendSV handler
+    IntDefaultHandler,                      // The SysTick handler
+    IntDefaultHandler,                      // GPIO Port A
+    IntDefaultHandler,                      // GPIO Port B
+    IntDefaultHandler,                      // GPIO Port C
+    IntDefaultHandler,                      // GPIO Port D
+    IntDefaultHandler,                      // GPIO Port E
+    IntDefaultHandler,                      // UART0 Rx and Tx
+    IntDefaultHandler,                      // UART1 Rx and Tx
+    IntDefaultHandler,                      // SSI0 Rx and Tx
+    IntDefaultHandler,                      // I2C0 Master and Slave
+    IntDefaultHandler,                      // PWM Fault
+    IntDefaultHandler,                      // PWM Generator 0
+    IntDefaultHandler,                      // PWM Generator 1
+    IntDefaultHandler,                      // PWM Generator 2
+    IntDefaultHandler,                      // Quadrature Encoder 0
+    IntDefaultHandler,                      // ADC Sequence 0
+    IntDefaultHandler,                      // ADC Sequence 1
+    IntDefaultHandler,                      // ADC Sequence 2
+    IntDefaultHandler,                      // ADC Sequence 3
+    IntDefaultHandler,                      // Watchdog timer
+    IntDefaultHandler,                      // Timer 0 subtimer A
+    IntDefaultHandler,                      // Timer 0 subtimer B
+    IntDefaultHandler,                      // Timer 1 subtimer A
+    IntDefaultHandler,                      // Timer 1 subtimer B
+    IntDefaultHandler,                      // Timer 2 subtimer A
+    IntDefaultHandler,                      // Timer 2 subtimer B
+    IntDefaultHandler,                      // Analog Comparator 0
+    IntDefaultHandler,                      // Analog Comparator 1
+    IntDefaultHandler,                      // Analog Comparator 2
+    IntDefaultHandler,                      // System Control (PLL, OSC, BO)
+    IntDefaultHandler,                      // FLASH Control
+    IntDefaultHandler,                      // GPIO Port F
+    IntDefaultHandler,                      // GPIO Port G
+    IntDefaultHandler,                      // GPIO Port H
+    IntDefaultHandler,                      // UART2 Rx and Tx
+    IntDefaultHandler,                      // SSI1 Rx and Tx
+    IntDefaultHandler,                      // Timer 3 subtimer A
+    IntDefaultHandler,                      // Timer 3 subtimer B
+    IntDefaultHandler,                      // I2C1 Master and Slave
+    IntDefaultHandler,                      // Quadrature Encoder 1
+    IntDefaultHandler,                      // CAN0
+    IntDefaultHandler,                      // CAN1
+    IntDefaultHandler,                      // CAN2
+    IntDefaultHandler,                      // Ethernet
+    IntDefaultHandler,                      // Hibernate
+    IntDefaultHandler,                      // USB0
+    IntDefaultHandler,                      // PWM Generator 3
+    IntDefaultHandler,                      // uDMA Software Transfer
+    IntDefaultHandler,                      // uDMA Error
+    IntDefaultHandler,                      // ADC1 Sequence 0
+    IntDefaultHandler,                      // ADC1 Sequence 1
+    IntDefaultHandler,                      // ADC1 Sequence 2
+    IntDefaultHandler,                      // ADC1 Sequence 3
+    IntDefaultHandler,                      // I2S0
+    IntDefaultHandler,                      // External Bus Interface 0
+    IntDefaultHandler,                      // GPIO Port J
+    IntDefaultHandler,                      // GPIO Port K
+    IntDefaultHandler,                      // GPIO Port L
+    IntDefaultHandler,                      // SSI2 Rx and Tx
+    IntDefaultHandler,                      // SSI3 Rx and Tx
+    IntDefaultHandler,                      // UART3 Rx and Tx
+    IntDefaultHandler,                      // UART4 Rx and Tx
+    IntDefaultHandler,                      // UART5 Rx and Tx
+    IntDefaultHandler,                      // UART6 Rx and Tx
+    IntDefaultHandler,                      // UART7 Rx and Tx
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    IntDefaultHandler,                      // I2C2 Master and Slave
+    IntDefaultHandler,                      // I2C3 Master and Slave
+    IntDefaultHandler,                      // Timer 4 subtimer A
+    IntDefaultHandler,                      // Timer 4 subtimer B
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    0,                                      // Reserved
+    IntDefaultHandler,                      // Timer 5 subtimer A
+    IntDefaultHandler,                      // Timer 5 subtimer B
+    IntDefaultHandler,                      // Wide Timer 0 subtimer A
+    IntDefaultHandler,                      // Wide Timer 0 subtimer B
+    IntDefaultHandler,                      // Wide Timer 1 subtimer A
+    IntDefaultHandler,                      // Wide Timer 1 subtimer B
+    IntDefaultHandler,                      // Wide Timer 2 subtimer A
+    IntDefaultHandler,                      // Wide Timer 2 subtimer B
+    IntDefaultHandler,                      // Wide Timer 3 subtimer A
+    IntDefaultHandler,                      // Wide Timer 3 subtimer B
+    IntDefaultHandler,                      // Wide Timer 4 subtimer A
+    IntDefaultHandler,                      // Wide Timer 4 subtimer B
+    IntDefaultHandler,                      // Wide Timer 5 subtimer A
+    IntDefaultHandler,                      // Wide Timer 5 subtimer B
+    IntDefaultHandler,                      // FPU
+    IntDefaultHandler,                      // PECI 0
+    IntDefaultHandler,                      // LPC 0
+    IntDefaultHandler,                      // I2C4 Master and Slave
+    IntDefaultHandler,                      // I2C5 Master and Slave
+    IntDefaultHandler,                      // GPIO Port M
+    IntDefaultHandler,                      // GPIO Port N
+    IntDefaultHandler,                      // Quadrature Encoder 2
+    IntDefaultHandler,                      // Fan 0
+    0,                                      // Reserved
+    IntDefaultHandler,                      // GPIO Port P (Summary or P0)
+    IntDefaultHandler,                      // GPIO Port P1
+    IntDefaultHandler,                      // GPIO Port P2
+    IntDefaultHandler,                      // GPIO Port P3
+    IntDefaultHandler,                      // GPIO Port P4
+    IntDefaultHandler,                      // GPIO Port P5
+    IntDefaultHandler,                      // GPIO Port P6
+    IntDefaultHandler,                      // GPIO Port P7
+    IntDefaultHandler,                      // GPIO Port Q (Summary or Q0)
+    IntDefaultHandler,                      // GPIO Port Q1
+    IntDefaultHandler,                      // GPIO Port Q2
+    IntDefaultHandler,                      // GPIO Port Q3
+    IntDefaultHandler,                      // GPIO Port Q4
+    IntDefaultHandler,                      // GPIO Port Q5
+    IntDefaultHandler,                      // GPIO Port Q6
+    IntDefaultHandler,                      // GPIO Port Q7
+    IntDefaultHandler,                      // GPIO Port R
+    IntDefaultHandler,                      // GPIO Port S
+    IntDefaultHandler,                      // PWM 1 Generator 0
+    IntDefaultHandler,                      // PWM 1 Generator 1
+    IntDefaultHandler,                      // PWM 1 Generator 2
+    IntDefaultHandler,                      // PWM 1 Generator 3
+    IntDefaultHandler                       // PWM 1 Fault
+};
+
+//*****************************************************************************
+//
+// The following are constructs created by the linker, indicating where the
+// the "data" and "bss" segments reside in memory.  The initializers for the
+// for the "data" segment resides immediately following the "text" segment.
+//
+//*****************************************************************************
+extern unsigned long _etext;
+extern unsigned long _data;
+extern unsigned long _edata;
+extern unsigned long _bss;
+extern unsigned long _ebss;
+
+//*****************************************************************************
+//
+// This is the code that gets called when the processor first starts execution
+// following a reset event.  Only the absolutely necessary set is performed,
+// after which the application supplied entry() routine is called.  Any fancy
+// actions (such as making decisions based on the reset cause register, and
+// resetting the bits in that register) are left solely in the hands of the
+// application.
+//
+//*****************************************************************************
+void
+ResetISR(void)
+{
+    unsigned long *pulSrc, *pulDest;
+
+    //
+    // Copy the data segment initializers from flash to SRAM.
+    //
+    pulSrc = &_etext;
+    for(pulDest = &_data; pulDest < &_edata; )
+    {
+        *pulDest++ = *pulSrc++;
+    }
+
+    //
+    // Zero fill the bss segment.
+    //
+    __asm("    ldr     r0, =_bss\n"
+          "    ldr     r1, =_ebss\n"
+          "    mov     r2, #0\n"
+          "    .thumb_func\n"
+          "zero_loop:\n"
+          "        cmp     r0, r1\n"
+          "        it      lt\n"
+          "        strlt   r2, [r0], #4\n"
+          "        blt     zero_loop");
+
+    //
+    // Enable the floating-point unit.  This must be done here to handle the
+    // case where main() uses floating-point and the function prologue saves
+    // floating-point registers (which will fault if floating-point is not
+    // enabled).  Any configuration of the floating-point unit using DriverLib
+    // APIs must be done here prior to the floating-point unit being enabled.
+    //
+    // Note that this does not use DriverLib since it might not be included in
+    // this project.
+    //
+    HWREG(NVIC_CPAC) = ((HWREG(NVIC_CPAC) &
+                         ~(NVIC_CPAC_CP10_M | NVIC_CPAC_CP11_M)) |
+                        NVIC_CPAC_CP10_FULL | NVIC_CPAC_CP11_FULL);
+
+    //
+    // Call the application's entry point.
+    //
+    main();
+}
+
+//*****************************************************************************
+//
+// This is the code that gets called when the processor receives a NMI.  This
+// simply enters an infinite loop, preserving the system state for examination
+// by a debugger.
+//
+//*****************************************************************************
+static void
+NmiSR(void)
+{
+    //
+    // Enter an infinite loop.
+    //
+    while(1)
+    {
+    }
+}
+
+//*****************************************************************************
+//
+// This is the code that gets called when the processor receives a fault
+// interrupt.  This simply enters an infinite loop, preserving the system state
+// for examination by a debugger.
+//
+//*****************************************************************************
+static void
+FaultISR(void)
+{
+    //
+    // Enter an infinite loop.
+    //
+    while(1)
+    {
+    }
+}
+
+//*****************************************************************************
+//
+// This is the code that gets called when the processor receives an unexpected
+// interrupt.  This simply enters an infinite loop, preserving the system state
+// for examination by a debugger.
+//
+//*****************************************************************************
+static void
+IntDefaultHandler(void)
+{
+    //
+    // Go into an infinite loop.
+    //
+    while(1)
+    {
+    }
+}
+
+
+/** MAIN.C **/
+
+
+#include "inc/hw_ints.h"
+#include "inc/hw_types.h"
+#include "inc/hw_memmap.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/gpio.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "Lcd.h"
+#include "Button.h"
+#include "Led.h"
+#include "inc/lm4f120h5qr.h"
+
+void init_function(void){
+	Button1_init();
+	Button2_init();
+	Button3_init();
+	Button4_init();
+	Button5_init();
+	Button6_init();
+	Button7_init();
+	Led1_init();
+	Led2_init();
+	Led3_init();
+	Led4_init();
+	Led5_init();
+	Led6_init();
+	Led7_init();
+	Lcd_init();
+
+}
+volatile unsigned long delay;
+int main(void) {
+	int i=0;
+    init_function();
+    int count =0;
+    int sonuc=0;
+    int onlar=0;
+    int birler=0;
+    int yarimlar=0;
+    int ceyrekler=0;
+    int k=0;
+    char buffer[100];
+    Lcd_Goto(1,1);
+    Lcd_Puts("TL Bozma makinesi");
+    for(delay=0;delay<=600000;delay++);
+    Lcd_Temizle();
+	while(1){
+		 if(Button1Pressed()){
+			 count++;
+			Led1Blinky();
+			for(delay=0;delay<=200000;delay++);
+			onlar%=10;
+			if(onlar%10!=0)
+			sonuc+=1000;
+			itoa(onlar,buffer,10);
+			onlar+=1;
+		    Lcd_Goto(1,12);
+			Lcd_Puts(buffer);
+			Lcd_Goto(1,1);
+	   }
+
+	   if(Button2Pressed()){
+		   count++;
+			Led2Blinky();
+			for(delay=0;delay<=200000;delay++);
+			birler%=10;
+			if(birler%10!=0){
+				sonuc+=100;
+			}
+			itoa(birler,buffer,10);
+			birler+=1;
+			Lcd_Goto(1,13);
+			Lcd_Puts(buffer);
+			Lcd_Goto(1,1);
+
+	    }
+		if(Button3Pressed()){
+			count++;
+			i++;
+			if(i==4){
+				Led3Blinky();
+				for(delay=0;delay<=200000;delay++);
+				count =0;
+				sonuc=0;
+				onlar=0;
+				birler=0;
+				yarimlar=0;
+				ceyrekler=0;
+				Lcd_Temizle();
+				Lcd_Goto(1,1);
+				i=0;
+			}
+			Led3Blinky();
+			for(delay=0;delay<=200000;delay++);
+			Lcd_Goto(1,14);
+			Lcd_Puts(".");
+			Lcd_Goto(1,1);
+		}
+		if(Button4Pressed()){
+			count++;
+			Led4Blinky();
+			for(delay=0;delay<=200000;delay++);
+			yarimlar%=10;
+			if(yarimlar%10!=0)
+			sonuc+=10;
+			itoa(yarimlar,buffer,10);
+			yarimlar+=1;
+			Lcd_Goto(1,15);
+			Lcd_Puts(buffer);
+			Lcd_Goto(1,1);
+	    }
+		if(Button5Pressed()){
+			count++;
+			Led5Blinky();
+			for(delay=0;delay<=200000;delay++);
+			ceyrekler%=10;
+			if(ceyrekler%10!=0)
+			sonuc+=1;
+			itoa(ceyrekler,buffer,10);
+			ceyrekler+=1;
+			Lcd_Goto(1,16);
+			Lcd_Puts(buffer);
+			Lcd_Goto(1,1);
+	    }
+		if(Button6Pressed()){
+			count++;
+			Led6Blinky();
+			parayi_boz(sonuc);
+	    }
+		if(Button7Pressed()){
+			count++;
+			Led7Blinky();
+			for(delay=0;delay<=200000;delay++);
+		    count =0;
+		    sonuc=0;
+		    onlar=0;
+		    birler=0;
+		    yarimlar=0;
+		    ceyrekler=0;
+			Lcd_Temizle();
+			Lcd_Goto(1,1);
+		}
+		else{
+
+			Led1Off();
+			Led2Off();
+			Led3Off();
+			Led4Off();
+			Led5Off();
+			Led6Off();
+			Led7Off();
+
+			for(delay=0;delay<=200000;delay++);
+			if(count>=1){
+			k++;
+			if(k==20){
+				parayi_boz(sonuc);
+			}
+			}
+		}
+	}
+
+}
+void saga_yazdir(int a){
+	int sonuc;
+	char buffer[20];
+	Lcd_Goto(1,1);
+	Lcd_Puts("                ");
+	sonuc = a%10;
+	a/=10;
+	itoa(sonuc,buffer,10);
+	Lcd_Goto(1,16);
+	Lcd_Puts(buffer);
+
+	sonuc = a%10;
+	a/=10;
+	itoa(sonuc,buffer,10);
+	Lcd_Goto(1,15);
+	Lcd_Puts(buffer);
+
+	Lcd_Goto(1,14);
+	Lcd_Puts(".");
+
+	sonuc = a%10;
+	a/=10;
+	itoa(sonuc,buffer,10);
+	Lcd_Goto(1,13);
+	Lcd_Puts(buffer);
+
+	sonuc = a%10;
+	a/=10;
+	itoa(sonuc,buffer,10);
+	Lcd_Goto(1,12);
+	Lcd_Puts(buffer);
+
+}
+void parayi_boz(int a){
+	int yirmilik=0,onluk=0,beslikler=0,birlikler=0,yarimlik=0,ceyreklik=0,delik=0,kurus=0;
+				for(delay=0;delay<=200000;delay++);
+				char buffer[20];
+
+				yirmilik=a/2000;
+				itoa(yirmilik,buffer,10);
+				Lcd_Goto(2,1);
+							Lcd_Puts(buffer);
+							Lcd_Goto(2,3);
+							Lcd_Puts("tane yirmilik");
+				for(delay=0;delay<=2000000;delay++);
+				a-=(yirmilik*2000);
+				Lcd_Puts("                ");
+				saga_yazdir(a);
+
+				onluk=a/1000;
+				itoa(onluk,buffer,10);
+				Lcd_Goto(2,1);
+							Lcd_Puts(buffer);
+							Lcd_Goto(2,3);
+							Lcd_Puts("tane onluk");
+				for(delay=0;delay<=2000000;delay++);
+				a-=(onluk*1000);
+				Lcd_Puts("                ");
+				saga_yazdir(a);
+				beslikler=a/500;
+				itoa(beslikler,buffer,10);
+				Lcd_Goto(2,1);
+							Lcd_Puts(buffer);
+							Lcd_Goto(2,3);
+							Lcd_Puts("tane beslik");
+				for(delay=0;delay<=2000000;delay++);
+				a-=(beslikler*500);
+				Lcd_Puts("                ");
+				saga_yazdir(a);
+
+				birlikler=a/100;
+				itoa(birlikler,buffer,10);
+				Lcd_Goto(2,1);
+							Lcd_Puts(buffer);
+							Lcd_Goto(2,3);
+							Lcd_Puts(" tane birlik");
+				for(delay=0;delay<=2000000;delay++);
+				a-=(birlikler*100);
+				Lcd_Puts("                ");
+				saga_yazdir(a);
+
+				yarimlik=a/50;
+				itoa(yarimlik,buffer,10);
+				Lcd_Goto(2,1);
+							Lcd_Puts(buffer);
+							Lcd_Goto(2,3);
+							Lcd_Puts("tane yarimlik");
+				for(delay=0;delay<=2000000;delay++);
+				a-=(yarimlik*50);
+				Lcd_Puts("                ");
+				saga_yazdir(a);
+
+				ceyreklik=a/25;
+				itoa(ceyreklik,buffer,10);
+				Lcd_Goto(2,1);
+				Lcd_Puts(buffer);
+				Lcd_Goto(2,3);
+				Lcd_Puts("tane ceyreklik");
+				for(delay=0;delay<=2000000;delay++);
+				a-=(ceyreklik*25);
+				Lcd_Puts("                ");
+				saga_yazdir(a);
+
+				delik=a/10;
+				itoa(delik,buffer,10);
+				Lcd_Goto(2,1);
+				Lcd_Puts(buffer);
+				Lcd_Goto(2,3);
+				Lcd_Puts("tane delik");
+				for(delay=0;delay<=2000000;delay++);
+				a-=(delik*10);
+				Lcd_Puts("                ");
+				saga_yazdir(a);
+
+				kurus=a/1;
+				itoa(kurus,buffer,10);
+				Lcd_Goto(2,1);
+				Lcd_Puts(buffer);
+				Lcd_Goto(2,3);
+				Lcd_Puts("tane kurusluk");
+				for(delay=0;delay<=2000000;delay++);
+				a-=(kurus*1);
+				Lcd_Puts("                ");
+				saga_yazdir(a);
+}
+
+/** LED.H **/ 
+
+#ifndef LED_H_
+#define LED_H_
+
+void Led1Blinky(void);
+void Led2Blinky(void);
+void Led3Blinky(void);
+void Led4Blinky(void);
+void Led5Blinky(void);
+void Led6Blinky(void);
+void Led7Blinky(void);
+
+void Led1Off(void);
+void Led2Off(void);
+void Led3Off(void);
+void Led4Off(void);
+void Led5Off(void);
+void Led6Off(void);
+void Led7Off(void);
+
+#endif /* LED_H_ */
+
+/** LED.C **/ 
+
+#include "inc/hw_ints.h"
+#include "inc/hw_types.h"
+#include "inc/hw_memmap.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/gpio.h"
+#include "Led.h"
+#include "inc/lm4f120h5qr.h"
+
+void Led1_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x0000001;      // 1) activate clock for Port A
+	  delay = SYSCTL_RCGC2_R;           // allow time for clock to start
+	                                    // 2) no need to unlock
+
+	  GPIO_PORTA_PCTL_R &= ~0x00000F00; // 3) regular GPIO
+	  GPIO_PORTA_AMSEL_R &= ~0x04;      // 4) disable analog function on PA2
+	  GPIO_PORTA_DIR_R |= 0x04;         // 5) set direction to output
+	  GPIO_PORTA_AFSEL_R &= ~0x04;      // 6) regular port function
+	  GPIO_PORTA_DEN_R |= 0x04;         // 7) enable digital port
+}
+
+void Led2_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x0000001;      // 1) activate clock for Port A
+	  delay = SYSCTL_RCGC2_R;           // allow time for clock to start
+	                                    // 2) no need to unlock
+
+	  GPIO_PORTA_PCTL_R &= ~0x0000F000; // 3) regular GPIO
+	  GPIO_PORTA_AMSEL_R &= ~0x08;      // 4) disable analog function on PA3
+	  GPIO_PORTA_DIR_R |= 0x08;         // 5) set direction to output
+	  GPIO_PORTA_AFSEL_R &= ~0x08;      // 6) regular port function
+	  GPIO_PORTA_DEN_R |= 0x08;         // 7) enable digital port
+}
+
+void Led3_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x0000001;      // 1) activate clock for Port A
+	  delay = SYSCTL_RCGC2_R;           // allow time for clock to start
+	                                    // 2) no need to unlock
+
+	  GPIO_PORTA_PCTL_R &= ~0x000F0000; // 3) regular GPIO
+	  GPIO_PORTA_AMSEL_R &= ~0x10;      // 4) disable analog function on PA4
+	  GPIO_PORTA_DIR_R |= 0x10;         // 5) set direction to output
+	  GPIO_PORTA_AFSEL_R &= ~0x10;      // 6) regular port function
+	  GPIO_PORTA_DEN_R |= 0x10;         // 7) enable digital port
+}
+
+void Led4_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x0000001;      // 1) activate clock for Port A
+	  delay = SYSCTL_RCGC2_R;           // allow time for clock to start
+	                                    // 2) no need to unlock
+
+	  GPIO_PORTA_PCTL_R &= ~0x00F00000; // 3) regular GPIO
+	  GPIO_PORTA_AMSEL_R &= ~0x20;      // 4) disable analog function on PA5
+	  GPIO_PORTA_DIR_R |= 0x20;         // 5) set direction to output
+	  GPIO_PORTA_AFSEL_R &= ~0x20;      // 6) regular port function
+	  GPIO_PORTA_DEN_R |= 0x20;         // 7) enable digital port
+}
+
+void Led5_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x0000001;      // 1) activate clock for Port A
+	  delay = SYSCTL_RCGC2_R;           // allow time for clock to start
+	                                    // 2) no need to unlock
+
+	  GPIO_PORTA_PCTL_R &= ~0x0F000000; // 3) regular GPIO
+	  GPIO_PORTA_AMSEL_R &= ~0x40;      // 4) disable analog function on PA6
+	  GPIO_PORTA_DIR_R |= 0x40;         // 5) set direction to output
+	  GPIO_PORTA_AFSEL_R &= ~0x40;      // 6) regular port function
+	  GPIO_PORTA_DEN_R |= 0x40;         // 7) enable digital port
+}
+
+void Led6_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x0000001;      // 1) activate clock for Port A
+	  delay = SYSCTL_RCGC2_R;           // allow time for clock to start
+	                                    // 2) no need to unlock
+	  GPIO_PORTA_PCTL_R &= ~0xF0000000; // 3) regular GPIO
+	  GPIO_PORTA_AMSEL_R &= ~0x80;      // 4) disable analog function on PA7
+	  GPIO_PORTA_DIR_R |= 0x80;         // 5) set direction to output
+	  GPIO_PORTA_AFSEL_R &= ~0x80;      // 6) regular port function
+	  GPIO_PORTA_DEN_R |= 0x80;         // 7) enable digital port
+}
+
+void Led7_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x0000020;      // 1) activate clock for Port F
+	  delay = SYSCTL_RCGC2_R;           // allow time for clock to start
+	                                    // 2) no need to unlock
+
+	  GPIO_PORTF_PCTL_R &= ~0x000000F0; // 3) regular GPIO
+	  GPIO_PORTF_AMSEL_R &= ~0x02;      // 4) disable analog function on PF1
+	  GPIO_PORTF_DIR_R |= 0x02;         // 5) set direction to output
+	  GPIO_PORTF_AFSEL_R &= ~0x02;      // 6) regular port function
+	  GPIO_PORTF_DEN_R |= 0x02;         // 7) enable digital port
+}
+
+void Led1Blinky(void){GPIO_PORTA_DATA_R |= 0x04;}
+void Led2Blinky(void){GPIO_PORTA_DATA_R |= 0x08;}
+void Led3Blinky(void){GPIO_PORTA_DATA_R |= 0x10;}
+void Led4Blinky(void){GPIO_PORTA_DATA_R |= 0x20;}
+void Led5Blinky(void){GPIO_PORTA_DATA_R |= 0x40;}
+void Led6Blinky(void){GPIO_PORTA_DATA_R |= 0x80;}
+void Led7Blinky(void){GPIO_PORTF_DATA_R |= 0x02;}
+
+void Led1Off(void){GPIO_PORTA_DATA_R &= ~0x04;}
+void Led2Off(void){GPIO_PORTA_DATA_R &= ~0x08;}
+void Led3Off(void){GPIO_PORTA_DATA_R &= ~0x10;}
+void Led4Off(void){GPIO_PORTA_DATA_R &= ~0x20;}
+void Led5Off(void){GPIO_PORTA_DATA_R &= ~0x40;}
+void Led6Off(void){GPIO_PORTA_DATA_R &= ~0x80;}
+void Led7Off(void){GPIO_PORTF_DATA_R &= ~0x02;}
+
+
+/** LCD.H **/ 
+
+#ifndef LCD_H_
+#define LCD_H_
+
+#define LCDPORT                  GPIO_PORTB_BASE
+#define LCDPORTENABLE    SYSCTL_PERIPH_GPIOB
+#define RS                               GPIO_PIN_0
+#define E                                GPIO_PIN_1
+#define D4                               GPIO_PIN_4
+#define D5                               GPIO_PIN_5
+#define D6                               GPIO_PIN_6
+#define D7                               GPIO_PIN_7
+
+void Lcd_Komut(unsigned char);  //Lcd ye komut gÃ¶ndermeye yarar
+void Lcd_Temizle(void);                 //Lcd ekranÄ±nÄ± temizler
+void Lcd_Puts(char*);                   //String ifade yazdÄ±rÄ±r
+void Lcd_Goto(char,char);               //KursorÃ¼ istenilen yere gÃ¶nderir
+void Lcd_init(void);                    //Lcd baÅŸlangÄ±Ã§ ayarlarÄ±
+void Lcd_Putch(unsigned char);  //Tek karekter yazdÄ±rÄ±r
+
+#endif /* LCD_H_ */
+
+/** LCD.C **/
+
+#include "inc/hw_ints.h"
+#include "inc/hw_types.h"
+#include "inc/hw_memmap.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/gpio.h"
+#include "Lcd.h"
+
+void Lcd_init() {
+
+        SysCtlPeripheralEnable(LCDPORTENABLE);
+        GPIOPinTypeGPIOOutput(LCDPORT, 0xFF);
+
+        SysCtlDelay(50000);
+
+        GPIOPinWrite(LCDPORT, RS,  0x00 );
+
+        GPIOPinWrite(LCDPORT, D4 | D5 | D6 | D7,  0x30 );
+        GPIOPinWrite(LCDPORT, E, 0x02);
+        SysCtlDelay(10);
+        GPIOPinWrite(LCDPORT, E, 0x00);
+
+        SysCtlDelay(50000);
+
+        GPIOPinWrite(LCDPORT, D4 | D5 | D6 | D7,  0x30 );
+        GPIOPinWrite(LCDPORT, E, 0x02);
+        SysCtlDelay(10);
+        GPIOPinWrite(LCDPORT, E, 0x00);
+
+        SysCtlDelay(50000);
+
+        GPIOPinWrite(LCDPORT, D4 | D5 | D6 | D7,  0x30 );
+        GPIOPinWrite(LCDPORT, E, 0x02);
+        SysCtlDelay(10);
+        GPIOPinWrite(LCDPORT, E, 0x00);
+
+        SysCtlDelay(50000);
+
+        GPIOPinWrite(LCDPORT, D4 | D5 | D6 | D7,  0x20 );
+        GPIOPinWrite(LCDPORT, E, 0x02);
+        SysCtlDelay(10);
+        GPIOPinWrite(LCDPORT, E, 0x00);
+
+        SysCtlDelay(50000);
+
+        Lcd_Komut(0x28);
+        Lcd_Komut(0xC0);
+        Lcd_Komut(0x06);
+        Lcd_Komut(0x80);
+        Lcd_Komut(0x28);
+        Lcd_Komut(0x0f);
+        Lcd_Temizle();
+
+}
+void Lcd_Komut(unsigned char c) {
+
+        GPIOPinWrite(LCDPORT, D4 | D5 | D6 | D7, (c & 0xf0) );
+        GPIOPinWrite(LCDPORT, RS, 0x00);
+        GPIOPinWrite(LCDPORT, E, 0x02);
+        SysCtlDelay(50000);
+        GPIOPinWrite(LCDPORT, E, 0x00);
+
+        SysCtlDelay(50000);
+
+        GPIOPinWrite(LCDPORT, D4 | D5 | D6 | D7, (c & 0x0f) << 4 );
+        GPIOPinWrite(LCDPORT, RS, 0x00);
+        GPIOPinWrite(LCDPORT, E, 0x02);
+        SysCtlDelay(10);
+        GPIOPinWrite(LCDPORT, E, 0x00);
+
+        SysCtlDelay(50000);
+
+}
+
+void Lcd_Putch(unsigned char d) {
+
+        GPIOPinWrite(LCDPORT, D4 | D5 | D6 | D7, (d & 0xf0) );
+        GPIOPinWrite(LCDPORT, RS, 0x01);
+        GPIOPinWrite(LCDPORT, E, 0x02);
+        SysCtlDelay(10);
+        GPIOPinWrite(LCDPORT, E, 0x00);
+
+        SysCtlDelay(50000);
+
+        GPIOPinWrite(LCDPORT, D4 | D5 | D6 | D7, (d & 0x0f) << 4 );
+        GPIOPinWrite(LCDPORT, RS, 0x01);
+        GPIOPinWrite(LCDPORT, E, 0x02);
+        SysCtlDelay(10);
+        GPIOPinWrite(LCDPORT, E, 0x00);
+
+        SysCtlDelay(50000);
+
+}
+void Lcd_Goto(char x, char y){
+        if(x==1)
+                Lcd_Komut(0x80+((y-1)%16));
+        else
+                Lcd_Komut(0xC0+((y-1)%16));
+}
+
+void Lcd_Temizle(void){
+        Lcd_Komut(0x01);
+        SysCtlDelay(10);
+}
+
+void Lcd_Puts( char* s){
+
+        while(*s)
+                Lcd_Putch(*s++);
+}
+
+/** BUTTON.H **/ 
+
+#ifndef BUTTON_H_
+#define BUTTON_H_
+
+
+#define PD0   (GPIO_PORTD_DATA_R&0x01) //Button1
+#define PD1   (GPIO_PORTD_DATA_R&0x02) //Button2
+#define PD2   (GPIO_PORTD_DATA_R&0x04) //Button3
+#define PD3   (GPIO_PORTD_DATA_R&0x08) //Button4
+#define PD6   (GPIO_PORTD_DATA_R&0x40) //Button5
+#define PC4   (GPIO_PORTC_DATA_R&0x10) //Button6
+#define PC5   (GPIO_PORTC_DATA_R&0x20) //Button7
+
+
+unsigned long Button1Pressed(void);
+unsigned long Button2Pressed(void);
+unsigned long Button3Pressed(void);
+unsigned long Button4Pressed(void);
+unsigned long Button5Pressed(void);
+unsigned long Button6Pressed(void);
+unsigned long Button7Pressed(void);
+
+
+
+
+#endif /* BUTTON_H_ */
+
+
+/** BUTTON.C **/ 
+
+#include "inc/hw_ints.h"
+#include "inc/hw_types.h"
+#include "inc/hw_memmap.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/gpio.h"
+#include "Button.h"
+#include "inc/lm4f120h5qr.h"
+
+//pd0 = 0x01
+//pd1 = 0x02
+//pd2 = 0x04
+//pd3 = 0x08
+//pd6 = 0x40
+//pd7 = 0x80
+
+void Button1_init(void){
+	  volatile unsigned long delay;
+  	  SYSCTL_RCGC2_R |= 0x00000004;     // 1) activate clock for Port D
+  	  delay = SYSCTL_RCGC2_R;           // allow time for clock to start
+  	  	  	  	  	  	  	  	  	  	// 2) no need to unlock GPIO Port D
+  	  GPIO_PORTC_AMSEL_R &= ~0x40;      // 3) disable analog on PD0
+  	  GPIO_PORTC_PCTL_R &= ~0x0F000000; // 4) PCTL GPIO on PD0
+  	  GPIO_PORTC_DIR_R &= ~0x40;        // 5) direction PD0 input
+  	  GPIO_PORTC_AFSEL_R &= ~0x40;      // 6) PD0 regular port function
+  	  GPIO_PORTC_DEN_R |= 0x40;         // 7) enable PD0 digital port
+}
+  void Button2_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x00000008;     // 1) activate clock for Port D
+	  delay = SYSCTL_RCGC2_R;
+
+	  GPIO_PORTD_AMSEL_R &= ~0x02;      // 3) disable analog on PD1
+	  GPIO_PORTD_PCTL_R &= ~0x000000F0; // 4) PCTL GPIO on PD1
+	  GPIO_PORTD_DIR_R &= ~0x02;        // 5) direction PD1 input
+	  GPIO_PORTD_AFSEL_R &= ~0x02;      // 6) PD1 regular port function
+	  GPIO_PORTD_DEN_R |= 0x02;         // 7) enable PD1 digital port
+  }
+  void Button3_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x00000008;     // 1) activate clock for Port D
+	  delay = SYSCTL_RCGC2_R;
+
+	  GPIO_PORTD_AMSEL_R &= ~0x04;      // 3) disable analog on PD2
+	  GPIO_PORTD_PCTL_R &= ~0x00000F00; // 4) PCTL GPIO on PD2
+	  GPIO_PORTD_DIR_R &= ~0x04;        // 5) direction PD2 input
+	  GPIO_PORTD_AFSEL_R &= ~0x04;      // 6) PD2 regular port function
+	  GPIO_PORTD_DEN_R |= 0x04;         // 7) enable PD2 digital port
+  }
+  void Button4_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x00000008;     // 1) activate clock for Port D
+	  delay = SYSCTL_RCGC2_R;
+
+	  GPIO_PORTD_AMSEL_R &= ~0x08;      // 3) disable analog on PD3
+	  GPIO_PORTD_PCTL_R &= ~0x0000F000; // 4) PCTL GPIO on PD3
+	  GPIO_PORTD_DIR_R &= ~0x08;        // 5) direction PD3 input
+	  GPIO_PORTD_AFSEL_R &= ~0x08;      // 6) PD3 regular port function
+	  GPIO_PORTD_DEN_R |= 0x08;         // 7) enable PD3 digital port
+  }
+  void Button5_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x00000008;     // 1) activate clock for Port D
+	  delay = SYSCTL_RCGC2_R;
+
+	  GPIO_PORTD_AMSEL_R &= ~0x040;      // 3) disable analog on PD6
+	  GPIO_PORTD_PCTL_R &= ~0x0F000000; // 4) PCTL GPIO on PD6
+	  GPIO_PORTD_DIR_R &= ~0x40;        // 5) direction PD6 input
+	  GPIO_PORTD_AFSEL_R &= ~0x40;      // 6) PD6 regular port function
+	  GPIO_PORTD_DEN_R |= 0x40;         // 7) enable PD6 digital port
+  }
+  void Button6_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x00000004;     // 1) activate clock for Port C
+	  delay = SYSCTL_RCGC2_R;
+
+	  GPIO_PORTC_AMSEL_R &= ~0x010;      // 3) disable analog on PC4
+	  GPIO_PORTC_PCTL_R &= ~0x000F0000; // 4) PCTL GPIO on PC4
+	  GPIO_PORTC_DIR_R &= ~0x10;        // 5) direction PC4 input
+	  GPIO_PORTC_AFSEL_R &= ~0x10;      // 6) PC4 regular port function
+	  GPIO_PORTC_DEN_R |= 0x10;         // 7) enable PC4 digital port
+  }
+  void Button7_init(void){
+	  volatile unsigned long delay;
+	  SYSCTL_RCGC2_R |= 0x00000004;     // 1) activate clock for Port C
+	  delay = SYSCTL_RCGC2_R;
+
+	  GPIO_PORTC_AMSEL_R &= ~0x20;      // 3) disable analog on PC5
+	  GPIO_PORTC_PCTL_R &= ~0x00F00000; // 4) PCTL GPIO on PC5
+	  GPIO_PORTC_DIR_R &= ~0x20;        // 5) direction PC5 input
+	  GPIO_PORTC_AFSEL_R &= ~0x20;      // 6) PC5 regular port function
+	  GPIO_PORTC_DEN_R |= 0x20;         // 7) enable PC5 digital port
+  }
+
+unsigned long Button1Pressed(){return GPIO_PORTC_DATA_R&0x40;}
+unsigned long Button2Pressed(){return GPIO_PORTD_DATA_R&0x02;}
+unsigned long Button3Pressed(){return GPIO_PORTD_DATA_R&0x04;}
+unsigned long Button4Pressed(){return GPIO_PORTD_DATA_R&0x08;}
+unsigned long Button5Pressed(){return GPIO_PORTD_DATA_R&0x40;}
+unsigned long Button6Pressed(){return GPIO_PORTC_DATA_R&0x10;}
+unsigned long Button7Pressed(){return GPIO_PORTC_DATA_R&0x20;}
+
+
